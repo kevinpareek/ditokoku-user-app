@@ -63,22 +63,26 @@ class BannerController extends GetxController implements GetxService {
         }
         _featuredBannerDataList!.add(campaign);
       }
-      for (var banner in bannerModel.banners!) {
-        if(_featuredBannerList!.contains(banner.imageFullUrl)) {
-          _featuredBannerList!.add('${banner.imageFullUrl}${bannerModel.banners!.indexOf(banner)}');
-        } else {
-          _featuredBannerList!.add(banner.imageFullUrl);
-        }
-        if(banner.item != null && moduleIdList.contains(banner.item!.moduleId)) {
-          _featuredBannerDataList!.add(banner.item);
-        }else if(banner.store != null && moduleIdList.contains(banner.store!.moduleId)) {
-          _featuredBannerDataList!.add(banner.store);
-        }else if(banner.type == 'default') {
-          _featuredBannerDataList!.add(banner.link);
-        }else{
-          _featuredBannerDataList!.add(null);
-        }
-      }
+   for (var banner in bannerModel.banners!) {
+  final String? imageUrl = banner.imageFullUrl ?? banner.image; // ✅ fallback
+
+  if (_featuredBannerList!.contains(imageUrl)) {
+    _featuredBannerList!.add('$imageUrl${bannerModel.banners!.indexOf(banner)}');
+  } else {
+    _featuredBannerList!.add(imageUrl);
+  }
+
+  if (banner.item != null && moduleIdList.contains(banner.item!.moduleId)) {
+    _featuredBannerDataList!.add(banner.item);
+  } else if (banner.store != null && moduleIdList.contains(banner.store!.moduleId)) {
+    _featuredBannerDataList!.add(banner.store);
+  } else if (banner.type == 'default') {
+    _featuredBannerDataList!.add(banner.link);
+  } else {
+    _featuredBannerDataList!.add(null);
+  }
+}
+
     }
     update();
   }

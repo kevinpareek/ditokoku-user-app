@@ -40,6 +40,7 @@ class Banner {
   String? title;
   String? type;
   String? imageFullUrl;
+  String? image; // ✅ Tambahin ini
   String? link;
   Store? store;
   Item? item;
@@ -49,6 +50,7 @@ class Banner {
     this.title,
     this.type,
     this.imageFullUrl,
+    this.image, // ✅ Tambahin ini juga
     this.link,
     this.store,
     this.item,
@@ -58,7 +60,11 @@ class Banner {
     id = json['id'];
     title = json['title'];
     type = json['type'];
+
+    // ✅ Handle dua kemungkinan API
     imageFullUrl = json['image_full_url'];
+    image = json['image'] ?? json['image_full_url'];
+
     link = json['link'];
     store = json['store'] != null ? Store.fromJson(json['store']) : null;
     item = json['item'] != null ? Item.fromJson(json['item']) : null;
@@ -69,7 +75,11 @@ class Banner {
     data['id'] = id;
     data['title'] = title;
     data['type'] = type;
+
+    // ✅ Simpan keduanya biar kompatibel
     data['image_full_url'] = imageFullUrl;
+    data['image'] = image;
+
     data['link'] = link;
     if (store != null) {
       data['store'] = store!.toJson();
@@ -79,4 +89,5 @@ class Banner {
     }
     return data;
   }
+
 }

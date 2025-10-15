@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sixam_mart/util/app_constants.dart';
+import 'package:sixam_mart/helper/auth_helper.dart';
+import 'package:sixam_mart/features/profile/controllers/profile_controller.dart';
+import 'package:get/get.dart';
 
 import 'PaymentDetailPage.dart';
 
@@ -31,11 +36,125 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
   bool isCheckingBill = false;
   Map<String, dynamic>? billInfo;
   String? errorMessage;
+  
+  bool isAgen = false;
+  bool isLoadingAgen = true;
+  
+  Map<String, dynamic>? productData; // ✅ Untuk menyimpan data product dari API
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAgenStatus();
+    _fetchProductData(); // ✅ Fetch product data saat init
+  }
 
   @override
   void dispose() {
     _customerNoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAgenStatus() async {
+    if (!AuthHelper.isLoggedIn()) {
+      setState(() {
+        isLoadingAgen = false;
+        isAgen = false;
+      });
+      return;
+    }
+
+    try {
+      setState(() {
+        isLoadingAgen = true;
+      });
+
+      final profileController = Get.find<ProfileController>();
+      
+      if (profileController.userInfoModel == null) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (profileController.userInfoModel == null) {
+          setState(() {
+            isLoadingAgen = false;
+          });
+          return;
+        }
+      }
+
+      final userId = profileController.userInfoModel!.id;
+      
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.token) ?? '';
+      
+      final response = await http.get(
+        Uri.parse('https://api.ditokoku.id/api/users/agen/user/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == true && data['data'] != null && data['data'].isNotEmpty) {
+          setState(() {
+            isAgen = true;
+            isLoadingAgen = false;
+          });
+        } else {
+          setState(() {
+            isAgen = false;
+            isLoadingAgen = false;
+          });
+        }
+      } else {
+        setState(() {
+          isAgen = false;
+          isLoadingAgen = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking agen status: $e');
+      setState(() {
+        isAgen = false;
+        isLoadingAgen = false;
+      });
+    }
+  }
+
+  // ✅ Fetch product data dari API products berdasarkan buyer_sku_code
+  Future<void> _fetchProductData() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.ditokoku.id/api/products'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> allProducts = json.decode(response.body);
+        
+        print('🔍 Looking for buyer_sku_code: ${widget.buyerSkuCode}');
+        
+        // Cari product yang buyer_sku_code nya cocok
+        final product = allProducts.firstWhere(
+          (p) => p['buyer_sku_code'] == widget.buyerSkuCode,
+          orElse: () => null,
+        );
+        
+        if (product != null) {
+          print('✅ Product found: ${product['product_name']}');
+          print('   price: ${product['price']}');
+          print('   priceTierTwo: ${product['priceTierTwo']}');
+          
+          setState(() {
+            productData = product;
+          });
+        } else {
+          print('❌ Product not found for buyer_sku_code: ${widget.buyerSkuCode}');
+        }
+      }
+    } catch (e) {
+      print('Error fetching product data: $e');
+    }
   }
 
   Color get serviceColor {
@@ -50,7 +169,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
         return Colors.red[700]!;
       case 'pdam':
         return Colors.blue[600]!;
-      case 'bpjs': // ✅ Tambah support BPJS
+      case 'bpjs':
         return Colors.green[700]!;
       default:
         return Colors.blue[600]!;
@@ -65,7 +184,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
         return Icons.wifi;
       case 'pdam':
         return Icons.water_drop;
-      case 'bpjs': // ✅ Tambah icon untuk BPJS
+      case 'bpjs':
         return Icons.local_hospital;
       default:
         return Icons.receipt_long;
@@ -80,7 +199,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
         return 'Masukan Nomor Pelanggan';
       case 'pdam':
         return 'Masukan Nomor Pelanggan PDAM';
-      case 'bpjs': // ✅ Tambah hint untuk BPJS
+      case 'bpjs':
         return 'Masukan Nomor BPJS';
       default:
         return 'Masukan Nomor Pelanggan';
@@ -94,7 +213,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
       case 'internet':
       case 'pdam':
         return 'Nomor Pelanggan';
-      case 'bpjs': // ✅ Tambah label untuk BPJS
+      case 'bpjs':
         return 'Nomor BPJS';
       default:
         return 'Nomor Pelanggan';
@@ -102,6 +221,14 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
   }
 
   Future<void> _checkBill() async {
+    // ✅ Validasi: Cek apakah product data sudah ada
+    if (productData == null) {
+      setState(() {
+        errorMessage = 'Produk tidak tersedia. Silakan coba lagi nanti.';
+      });
+      return;
+    }
+    
     if (_customerNoController.text.isEmpty) {
       setState(() {
         errorMessage = 'Masukkan ${inputLabel.toLowerCase()} terlebih dahulu';
@@ -171,6 +298,34 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
     )}';
   }
 
+  // Helper function untuk mendapatkan harga selling price yang benar
+  String _getSellingPrice() {
+    if (billInfo == null) return '0';
+    
+    // Selalu ambil selling_price dari inquiry response (ini total tagihan dari provider)
+    return billInfo!['selling_price']?.toString() ?? '0';
+  }
+  
+  // ✅ Helper function untuk mendapatkan biaya admin dari product data
+  String _getAdminPrice() {
+    if (productData == null) {
+      print('⚠️ productData is null, returning 0');
+      return '0';
+    }
+    
+    print('📊 isAgen: $isAgen');
+    print('   productData price: ${productData!['price']}');
+    print('   productData priceTierTwo: ${productData!['priceTierTwo']}');
+    
+    // Jika agen, ambil dari 'price' di product
+    if (isAgen) {
+      return productData!['price']?.toString() ?? '0';
+    }
+    
+    // Jika bukan agen, ambil dari 'priceTierTwo' di product
+    return productData!['priceTierTwo']?.toString() ?? productData!['price']?.toString() ?? '0';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -178,13 +333,12 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false, // jangan munculin back bawaan
-        titleSpacing: 0, // hilangin padding default AppBar
+        automaticallyImplyLeading: false,
+        titleSpacing: 0,
         title: Row(
           children: [
-            // Tambahin padding biar ga mepet kiri
             Padding(
-              padding: const EdgeInsets.only(left: 12), // ⬅️ kasih jarak kiri
+              padding: const EdgeInsets.only(left: 12),
               child: GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Image.asset(
@@ -195,7 +349,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 13), // jarak icon ke teks
+            const SizedBox(width: 13),
             Text(
               widget.serviceName,
               style: const TextStyle(
@@ -268,10 +422,10 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           decoration: BoxDecoration(
-                            color: Colors.white, // ✅ background putih
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0x662F318B), // ✅ #2F318B dengan 40% opacity
+                              color: const Color(0x662F318B),
                               width: 1.5,
                             ),
                           ),
@@ -282,13 +436,13 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                                 child: TextFormField(
                                   controller: _customerNoController,
                                   keyboardType: widget.serviceType == 'bpjs' 
-                                    ? TextInputType.text  // BPJS bisa ada huruf
+                                    ? TextInputType.text
                                     : TextInputType.number,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
                                     hintText: inputHint,
                                     hintStyle: const TextStyle(
-                                      color: Color(0xFFBAB0B0), // hint abu
+                                      color: Color(0xFFBAB0B0),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
                                     ),
@@ -337,7 +491,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                       // Check button
                       const SizedBox(width: 12),
                       GestureDetector(
-                        onTap: isCheckingBill ? null : _checkBill,
+                        onTap: (isCheckingBill || productData == null) ? null : _checkBill, // ✅ Disable jika product belum ada
                         child: Container(
                           width: 60,
                           height: 60,
@@ -347,6 +501,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                               color: const Color(0x662F318B),
                               width: 1.5,
                             ),
+                            color: productData == null ? Colors.grey[300] : null, // ✅ Visual indicator disabled
                           ),
                           child: Center(
                             child: isCheckingBill
@@ -363,10 +518,11 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                                   width: 30,
                                   height: 30,
                                   fit: BoxFit.contain,
+                                  color: productData == null ? Colors.grey : null, // ✅ Grayscale jika disabled
                                   errorBuilder: (context, error, stackTrace) {
                                     return Icon(
                                       Icons.search,
-                                      color: serviceColor,
+                                      color: productData == null ? Colors.grey : serviceColor,
                                       size: 24,
                                     );
                                   },
@@ -437,7 +593,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                           'Informasi Tagihan ${_getServiceTypeTitle()}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                            fontSize: 14,
                             color: Colors.black87,
                           ),
                         ),
@@ -479,7 +635,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                             children: [
                               _buildInfoRow('Periode', detail['periode'] ?? '-'),
                               _buildInfoRow('Nilai Tagihan', _formatPrice(detail['nilai_tagihan'])),
-                              _buildInfoRow('Biaya Admin', _formatPrice(detail['admin'])),
+                              _buildInfoRow('Biaya Admin', _formatPrice(_getAdminPrice())), // ✅ Ambil dari product data
                               if (detail['denda'] != null && detail['denda'] != '0')
                                 _buildInfoRow('Denda', _formatPrice(detail['denda'])),
                               if (detail['materai'] != null && detail['materai'] != '0')
@@ -507,7 +663,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                           ),
                         ),
                         Text(
-                          _formatPrice(billInfo!['selling_price']),
+                          _formatPrice(_getSellingPrice()), // ✅ Sudah benar menggunakan helper function
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -525,11 +681,11 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Create product object for PaymentDetailPage
+                          // Create product object for PaymentDetailPage dengan harga yang benar berdasarkan status agen
                           final productForPayment = {
                             'product_name': '${widget.serviceName} - ${billInfo!['customer_name']}',
-                            'price': billInfo!['selling_price'].toString(),
-                            'admin': billInfo!['admin'].toString(),
+                            'price': _getSellingPrice(), // ✅ Menggunakan helper function untuk selling price (price untuk agen, priceTierTwo untuk non-agen)
+                            'admin': _getAdminPrice(), // ✅ Menggunakan helper function untuk admin price (admin untuk agen, admin_tier_two untuk non-agen)
                             'buyer_sku_code': billInfo!['buyer_sku_code'],
                             'ref_id': billInfo!['ref_id'],
                           };
@@ -541,7 +697,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
                                 product: productForPayment,
                                 phoneNumber: _customerNoController.text,
                                 provider: widget.serviceName,
-                                providerLogo: widget.logoPath, // ✅ Menambahkan providerLogo seperti PulsaDataPage
+                                providerLogo: widget.logoPath,
                               ),
                             ),
                           );
@@ -583,7 +739,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
         return 'Internet & TV';
       case 'pdam':
         return 'PDAM';
-      case 'bpjs': // ✅ Tambah title untuk BPJS
+      case 'bpjs':
         return 'BPJS';
       default:
         return '';
@@ -621,7 +777,7 @@ class _PascabayarTopUpPageState extends State<PascabayarTopUpPage> {
           }
           break;
           
-        case 'bpjs': // ✅ Tambah info khusus BPJS jika ada
+        case 'bpjs':
           if (desc['kelas'] != null) {
             widgets.add(_buildInfoRow('Kelas', desc['kelas']));
           }

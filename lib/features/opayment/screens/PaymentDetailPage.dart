@@ -568,39 +568,7 @@ class _PaymentDetailPageState extends State<PaymentDetailPage> {
                               ),
                               
                               // Info Min Saldo untuk Agen - hanya tampil jika data sudah load
-                              if (isAllDataLoaded && isAgen)
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    color: Colors.orange[50],
-                                    border: Border.all(color: Colors.orange[200]!),
-                                  ),
-                                  padding: const EdgeInsets.all(12),
-                                  margin: const EdgeInsets.only(bottom: 32),
-                                  width: double.infinity,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        color: Colors.orange[700],
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Sebagai agen, Anda harus menyisakan minimal ${_formatPrice(minSaldo.toString())} setelah transaksi',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.orange[900],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else if (!isAllDataLoaded)
-                                const SizedBox(height: 16)
-                              else
+                             
                                 const SizedBox(height: 16),
                               
                               const SizedBox(height: 40),
