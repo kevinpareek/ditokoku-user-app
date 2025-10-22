@@ -1,4 +1,4 @@
-package id.ditokoku.app_user
+package id.ditokoku.app_usernew
 
 import io.flutter.embedding.android.FlutterActivity
 

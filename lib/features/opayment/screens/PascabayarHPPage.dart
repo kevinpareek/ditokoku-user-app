@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'PascabayarTopUpPage.dart';
 
 class PascabayarHPPage extends StatefulWidget {
@@ -11,107 +9,31 @@ class PascabayarHPPage extends StatefulWidget {
 }
 
 class _PascabayarHPPageState extends State<PascabayarHPPage> {
-  List<dynamic> hpPascabayarProducts = [];
-  bool isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchHPPascabayarProducts();
-  }
-
-  Future<void> _fetchHPPascabayarProducts() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.ditokoku.id/api/products'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> allProducts = json.decode(response.body);
-        
-        setState(() {
-          // Filter products based on brand_name HP Pascabayar
-          hpPascabayarProducts = allProducts.where((product) {
-            String brandName = product['brand_name'].toString().toUpperCase();
-            return brandName == 'HP PASCABAYAR';
-          }).toList();
-        });
-      }
-    } catch (e) {
-      print('Error fetching HP Pascabayar products: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading products: $e')),
-        );
-      }
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Map<String, dynamic> _getProviderInfo(String productName) {
-    String productNameUpper = productName.toUpperCase();
+  // Daftar provider HP Pascabayar
+  final List<Map<String, dynamic>> hpProviders = [
+    {
+      'name': 'Kartu Halo',
+      'description': 'Bayar tagihan Kartu Halo bulanan',
+      'logoPath': 'https://pbs.twimg.com/profile_images/1410496569355378693/A2kPM86S_400x400.jpg',
+      'iconColor': Color(0xFFD32F2F),
+      'buyerSkuCode': 'postgdrrrz',
+    },
+    {
+      'name': 'Indosat Postpaid',
+      'description': 'Bayar tagihan Indosat bulanan',
+      'logoPath': 'https://im3-img.indosatooredoo.com/dataprod/portalcontent/portal/images/pagemetaimage/638677123279403092.png',
+      'iconColor': Color(0xFFFFB300),
+      'buyerSkuCode': 'indosat_pascabayar',
+    },
+    {
+      'name': 'XL Postpaid',
+      'description': 'Bayar tagihan XL bulanan',
+      'logoPath': 'https://storage.googleapis.com/static-priocms-dev/2021/08/ddasd-3.jpeg',
+      'iconColor': Color(0xFF1565C0),
+      'buyerSkuCode': 'postdaaaax',
+    },
     
-    if (productNameUpper.contains('HALO') || productNameUpper.contains('TELKOMSEL')) {
-      return {
-        'name': 'Kartu Halo Postpaid',
-        'description': 'Bayar tagihan Kartu Halo bulanan',
-        'logoPath': 'assets/image/telkomsel_logo.png',
-        'backgroundColor': Colors.white,
-        'iconColor': Colors.red[600],
-        'icon': Icons.phone,
-        'buyerSkuCode': 'postgdrrrz',
-      };
-    } else if (productNameUpper.contains('INDOSAT') || productNameUpper.contains('IM3')) {
-      return {
-        'name': 'Indosat Postpaid',
-        'description': 'Bayar tagihan Indosat bulanan',
-        'logoPath': 'assets/image/indosat_logo.png',
-        'backgroundColor': Colors.white,
-        'iconColor': Colors.yellow[700],
-        'icon': Icons.phone,
-        'buyerSkuCode': 'indosat_pascabayar',
-      };
-    } else if (productNameUpper.contains('XL')) {
-      return {
-        'name': 'XL Postpaid',
-        'description': 'Bayar tagihan XL bulanan',
-        'logoPath': 'assets/image/xl_logo.png',
-        'backgroundColor': Colors.white,
-        'iconColor': Colors.blue[700],
-        'icon': Icons.phone,
-        'buyerSkuCode': 'postdaaaax',
-      };
-    } else if (productNameUpper.contains('THREE') || productNameUpper.contains('TRI')) {
-      return {
-        'name': 'Three Postpaid',
-        'description': 'Bayar tagihan Three bulanan',
-        'logoPath': 'assets/image/three_logo.png',
-        'backgroundColor': Colors.white,
-        'iconColor': Colors.purple[600],
-        'icon': Icons.phone,
-        'buyerSkuCode': 'three_pascabayar',
-      };
-    }
-    
-    // Default untuk provider lain
-    return {
-      'name': 'Kartu Halo Postpaid',
-      'description': 'Bayar tagihan HP bulanan',
-      'logoPath': 'assets/image/telkomsel_logo.png',
-      'backgroundColor': Colors.white,
-      'iconColor': Colors.red[600],
-      'icon': Icons.phone,
-      'buyerSkuCode': 'hp_pascabayar',
-    };
-  }
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -120,112 +42,61 @@ class _PascabayarHPPageState extends State<PascabayarHPPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Image.asset(
-                  'assets/image/goback.png',
-                  width: 31,
-                  height: 31,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            const SizedBox(width: 13),
-            const Text(
-              'Pasca Bayar HP',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        leading: IconButton(
+          icon: Image.asset(
+            'assets/image/goback.png',
+            width: 28,
+            height: 28,
+            fit: BoxFit.contain,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Pasca Bayar HP',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: false,
       ),
-      body: isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : _buildContent(),
-    );
-  }
-
-  Widget _buildContent() {
-    if (hpPascabayarProducts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.phone_disabled_outlined,
-              size: 80,
-              color: Colors.grey[300],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Tidak ada produk HP Pascabayar tersedia',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ListView.separated(
+          itemCount: hpProviders.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            return _buildProviderCard(hpProviders[index]);
+          },
         ),
-      );
-    }
-
-    // Group products by provider untuk menghindari duplikasi
-    Map<String, Map<String, dynamic>> uniqueProviders = {};
-    for (var product in hpPascabayarProducts) {
-      var providerInfo = _getProviderInfo(product['product_name'] ?? '');
-      String providerKey = providerInfo['name'];
-      if (!uniqueProviders.containsKey(providerKey)) {
-        uniqueProviders[providerKey] = providerInfo;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: ListView.separated(
-        itemCount: uniqueProviders.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          final providerInfo = uniqueProviders.values.elementAt(index);
-          return _buildHPPascabayarCard(providerInfo);
-        },
       ),
     );
   }
 
-  Widget _buildHPPascabayarCard(Map<String, dynamic> product) {
+  Widget _buildProviderCard(Map<String, dynamic> provider) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PascabayarTopUpPage(
-              serviceName: product['name'],
-              serviceDescription: product['description'],
-              logoPath: product['logoPath'],
-              buyerSkuCode: product['buyerSkuCode'],
-              serviceColor: product['iconColor'],
+              serviceName: provider['name'],
+              serviceDescription: provider['description'],
+              logoPath: provider['logoPath'],
+              buyerSkuCode: provider['buyerSkuCode'],
+              serviceColor: provider['iconColor'],
               serviceType: 'hp_pascabayar',
             ),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.1),
@@ -234,60 +105,62 @@ class _PascabayarHPPageState extends State<PascabayarHPPage> {
               offset: const Offset(0, 2),
             ),
           ],
-          border: Border.all(
-            color: const Color(0x662F318B),
-            width: 1,
-          ),
         ),
         child: Row(
           children: [
-            // Logo container with icon overlay
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Stack(
-                children: [
-                  // Provider Logo
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      product['logoPath'],
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.red[50],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.phone,
-                            color: product['iconColor'],
-                            size: 24,
-                          ),
-                        );
-                      },
+            // Logo container
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                provider['logoPath'],
+                width: 50,
+                height: 50,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: provider['iconColor'].withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                ],
+                    child: Icon(
+                      Icons.phone,
+                      color: provider['iconColor'],
+                      size: 24,
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          provider['iconColor'],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),
             
-            // Product info
+            // Provider info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product['name'],
+                    provider['name'],
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -296,7 +169,7 @@ class _PascabayarHPPageState extends State<PascabayarHPPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    product['description'],
+                    provider['description'],
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],

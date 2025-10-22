@@ -16,6 +16,8 @@ class PascabayarTopUpPage extends StatefulWidget {
   final String buyerSkuCode;
   final Color? serviceColor;
   final String serviceType; // 'pln', 'internet', 'pdam', 'bpjs'
+final bool isNetworkIcon;
+
 
   const PascabayarTopUpPage({
     super.key,
@@ -25,6 +27,7 @@ class PascabayarTopUpPage extends StatefulWidget {
     required this.buyerSkuCode,
     this.serviceColor,
     required this.serviceType,
+    this.isNetworkIcon = false,
   });
 
   @override

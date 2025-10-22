@@ -13,6 +13,7 @@ import 'package:sixam_mart/services/transaction_service.dart';
 import 'SemuaProdukPage.dart';
 import 'TopUpPage.dart';
 import 'ETollPage.dart';
+import 'VoucherPage.dart';
 import 'PajakLayananPage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:sixam_mart/util/styles.dart';
@@ -60,6 +61,10 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
   String? namaKonter;
   bool isAgen = false;
 
+  // Variabel untuk PPOB Menu <--- BARU DITAMBAH
+  List<Map<String, dynamic>> ppobMenuItems = [];
+  bool isLoadingMenu = true;
+
   // Auto-refresh variables
   Timer? _autoRefreshTimer;
   final Set<String> _refreshingTransactions = <String>{};
@@ -71,6 +76,7 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
     super.initState();
     _loadRecentTransactions();
     _checkAgenStatus();
+    _loadPPOBMenu(); // Load dynamic menu <--- BARU DITAMBAH
     _startAutoRefreshTimer();
 
      WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -105,6 +111,79 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
   void _stopAutoRefreshTimer() {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = null;
+  }
+
+  // MARK: PPOB Menu Dynamic Fetch <--- BARU DITAMBAH
+  Future<void> _loadPPOBMenu() async {
+    setState(() {
+      isLoadingMenu = true;
+    });
+
+    try {
+      // Use the actual API URL
+      final response = await http.get(
+        Uri.parse('https://api.ditokoku.id/api/menu-ppob'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData['status'] == true && responseData['data'] is List) {
+          final List<dynamic> menuData = responseData['data'];
+
+          final List<dynamic> activeMenuData = menuData
+              .where((item) => item['is_active'] == 1)
+              .toList();
+
+
+          setState(() {
+            ppobMenuItems = activeMenuData.map((item) {
+              final String iconUrl = item['icon_url'] ?? '';
+              // Determine if it's a local asset (starts with 'assets/') or a network URL
+              final bool isAsset = iconUrl.startsWith('assets/'); 
+              
+              return {
+                'image': iconUrl,
+                'label': item['label'],
+                'route': item['route'],
+                'isAsset': isAsset, // Pass the flag
+              };
+            }).toList();
+          });
+        } else {
+          _setFallbackMenu();
+        }
+      } else {
+        _setFallbackMenu();
+      }
+    } catch (e) {
+      print('❌ Error loading PPOB menu: $e');
+      _setFallbackMenu();
+    } finally {
+      setState(() {
+        isLoadingMenu = false;
+      });
+    }
+  }
+
+  // Fallback if API call fails <--- BARU DITAMBAH
+  void _setFallbackMenu() {
+    setState(() {
+      ppobMenuItems = [
+        {'image': 'assets/image/pulsa_data_icon.png', 'label': 'Pulsa & Data', 'route': 'PulsaDataPage', 'isAsset': true},
+        {'image': 'assets/image/pln_icon.png', 'label': 'Listrik PLN', 'route': 'PLNPage', 'isAsset': true},
+        {'image': 'assets/image/internet_tv_icon.png', 'label': 'Internet & TV', 'route': 'InternetTVPage', 'isAsset': true},
+        {'image': 'assets/image/emoney_icon.png', 'label': 'E-Wallet', 'route': 'UangElektronikPage', 'isAsset': true},
+        {'image': 'assets/image/pdam_icon.png', 'label': 'PDAM', 'route': 'PDAMPage', 'isAsset': true},
+        {'image': 'assets/image/game_icon.png', 'label': 'Game', 'route': 'GamesPage', 'isAsset': true},
+        {'image': 'assets/image/bpjs_icon.png', 'label': 'BPJS', 'route': 'BPJSPage', 'isAsset': true},
+        {'image': 'assets/image/pascabayar_icon.png', 'label': 'Pascabayar', 'route': 'PascabayarHPPage', 'isAsset': true},
+        {'image': 'assets/image/asset-management.png', 'label': 'Multifinance', 'route': 'MultifinancePage', 'isAsset': true},
+        {'image': 'assets/image/emoney.png', 'label': 'e-Money', 'route': 'ETollPage', 'isAsset': true},
+        {'image': 'assets/image/taxes.png', 'label': 'Pajak dll', 'route': 'PajakLayananPage', 'isAsset': true},
+        {'image': 'assets/image/voucher.png', 'label': 'Voucher', 'route': 'VoucherPage', 'isAsset': true},
+      ];
+    });
   }
 
   void _autoRefreshPendingTransactions() async {
@@ -478,20 +557,8 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> menuItems = [
-      {'image': 'assets/image/pulsa_data_icon.png', 'label': 'Pulsa & Data', 'route': 'PulsaDataPage'},
-      {'image': 'assets/image/pln_icon.png', 'label': 'Listrik PLN', 'route': 'PLNPage'},
-      {'image': 'assets/image/internet_tv_icon.png', 'label': 'Internet & TV', 'route': 'InternetTVPage'},
-      {'image': 'assets/image/emoney_icon.png', 'label': 'E-Wallet', 'route': 'UangElektronikPage'},
-      {'image': 'assets/image/pdam_icon.png', 'label': 'PDAM', 'route': 'PDAMPage'},
-      {'image': 'assets/image/game_icon.png', 'label': 'Game', 'route': 'GamesPage'},
-      {'image': 'assets/image/bpjs_icon.png', 'label': 'BPJS', 'route': 'BPJSPage'},
-      {'image': 'assets/image/pascabayar_icon.png', 'label': 'Pascabayar', 'route': 'PascabayarHPPage'},
-       {'image': 'assets/image/asset-management.png', 'label': 'Multifinance', 'route': 'MultifinancePage'},
-      {'image': 'assets/image/emoney.png', 'label': 'e-Money', 'route': 'ETollPage'},
-      {'image': 'assets/image/taxes.png', 'label': 'Pajak dll', 'route': 'PajakLayananPage'},
-    ];
-
+    // OLD static menuItems list REMOVED here
+    
     final List<Map<String, dynamic>> quickActions = [
       {'image': 'assets/image/isi_saldo_icon.png', 'label': 'Isi Saldo'},
       {'image': 'assets/image/poin_icon.png', 'label': 'Poin'},
@@ -511,6 +578,7 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
             onRefresh: () async {
               await _loadRecentTransactions();
               await _checkAgenStatus();
+              await _loadPPOBMenu(); // Refresh menu
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -535,7 +603,7 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
                   const SizedBox(height: 24),
 
                   // Menu Grid
-                  _buildMenuGrid(isLoggedIn, menuItems),
+                  _buildMenuGrid(isLoggedIn), // Menggunakan data dinamis ppobMenuItems
 
                   const SizedBox(height: 24),
 
@@ -711,7 +779,44 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
     }
   }
 
-  Widget _buildMenuGrid(bool isLoggedIn, List<Map<String, dynamic>> menuItems) {
+  // MENGGANTIKAN _buildMenuGrid LAMA DENGAN VERSI DINAMIS + SHIMMER LOADING
+  Widget _buildMenuGrid(bool isLoggedIn) {
+    if (isLoadingMenu) {
+      // Shimmer loading state for the grid
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 0, blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: GridView.builder(
+          padding: const EdgeInsets.all(0),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 18,
+            mainAxisSpacing: 18,
+            childAspectRatio: 0.65,
+          ),
+          itemCount: 8, // Show a few shimmer items
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Shimmer(child: Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.grey[300], shape: BoxShape.circle))),
+                const SizedBox(height: 8),
+                Shimmer(child: Container(width: 50, height: 10, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4)))),
+              ],
+            );
+          },
+        ),
+      );
+    }
+    
+    // Use dynamic ppobMenuItems
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
@@ -728,19 +833,26 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
           mainAxisSpacing: 18,
           childAspectRatio: 0.65,
         ),
-        itemCount: menuItems.length,
+        itemCount: ppobMenuItems.length,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemBuilder: (context, index) {
+          final menuItem = ppobMenuItems[index];
           return _buildServiceItem(
-            imagePath: menuItems[index]['image'],
-            label: menuItems[index]['label'],
+            imagePath: menuItem['image'],
+            label: menuItem['label'],
+            isAsset: menuItem['isAsset'] ?? false, // <--- PASS isAsset FLAG
             onTap: () {
               if (!isLoggedIn) {
                 _showLoginDialog();
                 return;
               }
-              _handleServiceNavigation(context, menuItems[index]['route']);
+              _handleServiceNavigation(
+                context, 
+                menuItem['route'], 
+                menuItem['image'], 
+                menuItem['isAsset'] ?? false, // Pass image path and isAsset
+              );
             },
           );
         },
@@ -748,7 +860,41 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
     );
   }
 
-  Widget _buildServiceItem({required String imagePath, required String label, required VoidCallback onTap}) {
+  // MENGGANTIKAN _buildServiceItem LAMA DENGAN VERSI ASSET/NETWORK
+  Widget _buildServiceItem({required String imagePath, required String label, required VoidCallback onTap, required bool isAsset}) {
+    Widget iconWidget;
+    
+    if (isAsset) {
+      // Use Image.asset for local assets
+      iconWidget = Image.asset(
+        imagePath, 
+        width: 34, 
+        height: 34, 
+        fit: BoxFit.contain, 
+        errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, color: Colors.grey[400], size: 20),
+      );
+    } else {
+      // Use Image.network for URLs
+      iconWidget = Image.network(
+        imagePath, 
+        width: 34, 
+        height: 34, 
+        fit: BoxFit.contain, 
+        loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, color: Colors.grey[400], size: 20),
+      );
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -760,7 +906,7 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
             height: 60,
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
-            child: Image.asset(imagePath, width: 34, height: 34, fit: BoxFit.contain, errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, color: Colors.grey[400], size: 20)),
+            child: iconWidget, // MENGGUNAKAN WIDGET ICON YANG SUDAH DIPILIH
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -775,7 +921,8 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
     );
   }
 
-  void _handleServiceNavigation(BuildContext context, String route) {
+  // MENGGANTIKAN _handleServiceNavigation LAMA DENGAN TAMBAHAN PARAMETER ICON
+  void _handleServiceNavigation(BuildContext context, String route, String iconPath, bool isAsset) {
     Widget? page;
     
     switch (route) {
@@ -809,13 +956,18 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
             case 'PajakLayananPage':
         page = const PajakLayananPage();
         break;
+           case 'VoucherPage':
+        page = const VoucherPage();
+        break;
       case 'BPJSPage':
-        page = const PascabayarTopUpPage(
+        // Jika rute adalah BPJS, gunakan PascabayarTopUpPage
+        page = PascabayarTopUpPage(
           serviceName: 'BPJS Kesehatan',
           serviceDescription: 'Bayar BPJS Kesehatan',
-          logoPath: 'assets/image/bpjs_icon.png',
+          logoPath: iconPath, // Menggunakan path dinamis
           buyerSkuCode: 'BPJS',
           serviceType: 'bpjs',
+          isNetworkIcon: !isAsset, // Menggunakan flag isAsset untuk menentukan isNetworkIcon
         );
         break;
     }
@@ -944,8 +1096,6 @@ class _DashboardOPaymentState extends State<DashboardOPayment> {
       ),
     );
   }
-
- // Tambahkan method ini di class _DashboardOPaymentState
 
 // Method untuk mengambil data produk dari API
 Future<Map<String, dynamic>?> _getProductData(String buyerSkuCode) async {
